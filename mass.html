@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>地球の質量シミュレーター</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    label {
+      display: inline-block;
+      width: 150px;
+    }
+    input {
+      width: 100px;
+    }
+    .section {
+      margin-bottom: 15px;
+    }
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .ratios-container {
+      display: flex;
+      gap: 40px;
+      margin-top: 20px;
+    }
+    .ratio-box {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>地球の質量シミュレーター</h1>
+
+  <div class="section">
+    <h3>各層の密度 [g/cm3] と厚さ [km]</h3>
+    <div>海水：
+      <label>密度</label><input type="number" id="density_water" value="1.0">
+      <label>厚さ</label><input type="number" id="thickness_water" value="5">
+    </div>
+    <div>地殻：
+      <label>密度</label><input type="number" id="density_crust" value="2.7">
+      <label>厚さ</label><input type="number" id="thickness_crust" value="35">
+    </div>
+    <div>マントル：
+      <label>密度</label><input type="number" id="density_mantle" value="4.5">
+      <label>厚さ</label><input type="number" id="thickness_mantle" value="2885">
+    </div>
+    <div>核：
+      <label>密度</label><input type="number" id="density_core" value="11.0">
+      <label>厚さ</label><input type="number" id="thickness_core" value="3480">
+    </div>
+  </div>
+
+  <button onclick="simulate()">シミュレーション実行</button>
+  <button onclick="resetForm()">リセット</button>
+
+  <div class="result" id="result"></div>
+
+  <div class="ratios-container">
+    <div class="ratio-box" id="volume_ratios"></div>
+    <div class="ratio-box" id="mass_ratios"></div>
+  </div>
+
+  <script>
+    const EARTH_MASS_TRUE = 5.972e24; // 真の地球質量 [kg]
+
+    function simulate() {
+      const inputs = [
+        {name: "海水", density: +document.getElementById("density_water").value * 1000, thickness: +document.getElementById("thickness_water").value},
+        {name: "地殻", density: +document.getElementById("density_crust").value * 1000, thickness: +document.getElementById("thickness_crust").value},
+        {name: "マントル", density: +document.getElementById("density_mantle").value * 1000, thickness: +document.getElementById("thickness_mantle").value},
+        {name: "核", density: +document.getElementById("density_core").value * 1000, thickness: +document.getElementById("thickness_core").value}
+      ];
+
+      let r_outer = 0; // km
+      let mass_total = 0;
+      let volumes = [];
+      let masses = [];
+
+      for (let i = inputs.length - 1; i >= 0; i--) {
+        const {density, thickness} = inputs[i];
+        const r_inner = r_outer;
+        r_outer += thickness;
+        const R_outer = r_outer * 1000;
+        const R_inner = r_inner * 1000;
+        const volume = (4/3) * Math.PI * (Math.pow(R_outer,3) - Math.pow(R_inner,3));
+        const mass = density * volume;
+        volumes[i] = volume;
+        masses[i] = mass;
+        mass_total += mass;
+      }
+
+      const percent = (mass_total / EARTH_MASS_TRUE * 100).toFixed(2);
+
+      document.getElementById("result").innerHTML =
+        `推定質量：${mass_total.toExponential(3)} kg<br>
+         真値：${EARTH_MASS_TRUE.toExponential(3)} kg<br>
+         誤差：${percent} %`;
+
+      const totalVolume = volumes.reduce((a, b) => a + b, 0);
+      let volumeText = '<h3>各層の体積比 [%]</h3>';
+      for (let i = 0; i < inputs.length; i++) {
+        const ratio = (volumes[i] / totalVolume * 100).toFixed(2);
+        volumeText += `${inputs[i].name}：${ratio}%<br>`;
+      }
+      document.getElementById("volume_ratios").innerHTML = volumeText;
+
+      let massText = '<h3>各層の質量比 [%]</h3>';
+      for (let i = 0; i < inputs.length; i++) {
+        const ratio = (masses[i] / mass_total * 100).toFixed(2);
+        massText += `${inputs[i].name}：${ratio}%<br>`;
+      }
+      document.getElementById("mass_ratios").innerHTML = massText;
+    }
+
+    function resetForm() {
+      document.getElementById("density_water").value = 1.0;
+      document.getElementById("thickness_water").value = 5;
+      document.getElementById("density_crust").value = 2.7;
+      document.getElementById("thickness_crust").value = 35;
+      document.getElementById("density_mantle").value = 4.5;
+      document.getElementById("thickness_mantle").value = 2885;
+      document.getElementById("density_core").value = 11.0;
+      document.getElementById("thickness_core").value = 3480;
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("volume_ratios").innerHTML = "";
+      document.getElementById("mass_ratios").innerHTML = "";
+    }
+  </script>
+</body>
+</html>
